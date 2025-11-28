@@ -1,0 +1,3219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UNTITLED GEOLOGY GAME</title>
+  <link rel="icon" type="image/png" href="icon.png">
+<style>
+  :root{
+    --bg-main: url('bg_title.png');
+    --bg-lib:  url('bg_library.png');
+    --bg-ravine: url('Compression_ground.png'); 
+    --bg-run-intro: url('33.png');
+    --bg-mini1:     url('Compression_ground.png');
+    --bg-gameover:  url('Compression_ground.png');
+    --bg-desert:    url('tension_ground.png'); 
+    --bg-mountain:  url('mountain.png');     
+    --bg-tension: url('tension_groundcracklava.png'); 
+    --bg-lava: url('lava.png');
+    --bg-shear: url('shear_ground.png');
+    --bg-rubber: url("rubber.png");
+    --bg-clay: url("clay.png");
+    --bg-chalk: url("chalk.png");
+    --bg-book: url("book.png");
+
+    --rock-img: url('rock.png');
+
+    /* Character card previews (UI only) */
+    --char1: url('char1.png');
+    --char2: url('char2.png');
+    --char3: url('char3.png');
+
+    /* Ravine player sprite (updated by JS) */
+    --rvn-player: url('char1_front.png');
+
+    --panel: #76533f;
+    --panel-dark: #4f2e21;
+    --ui-brown: #7d4d34;
+    --ui-brown-dark: #502e21;
+    --white: #f5f5f5;
+    --black: #0f0f0f;
+  }
+
+  @font-face { 
+    font-family: pixel; 
+    src: url(medodica.regular.woff); 
+  }
+  *{ font-family: pixel; }
+
+  /* ===== global ===== */
+  html, body { 
+    height:100%; 
+    margin:0; 
+    background:#222; 
+    color:var(--white); 
+    image-rendering:pixelated;
+  }
+  .stage-wrap{ 
+    display:grid; 
+    place-items:center; 
+    height:100%; 
+  }
+  .stage{
+    width:1200px; 
+    height:675px; 
+    position:relative; 
+    overflow:hidden;
+    border:8px solid #111; 
+    border-radius:12px; 
+    background:#333;
+    box-shadow:0 10px 40px rgba(0,0,0,.4);
+  }
+  .stage::before{
+    content:""; 
+    position:absolute; 
+    inset:0;
+    background-size:cover; 
+    background-position:center;
+    filter:brightness(var(--bg-brightness,1));
+  }
+  .stage[data-bg="title"]::before{ background-image:var(--bg-main); }
+  .stage[data-bg="library"]::before{ background-image:var(--bg-lib); }
+  .stage[data-bg="ravine"]::before{ background-image:var(--bg-ravine); }
+  .stage[data-bg="run-intro"]::before{ background-image:var(--bg-run-intro); }
+  .stage[data-bg="mini1"]::before{ background-image:var(--bg-mini1); }
+  .stage[data-bg="gameover"]::before{ background-image:var(--bg-gameover); }
+  .stage[data-bg="desert"]::before { background-image: var(--bg-desert); }
+  .stage[data-bg="mountain"]::before { background-image: var(--bg-mountain); }
+  .stage[data-bg="tension"]::before { background-image: var(--bg-tension); }
+  .stage[data-bg="lava"]::before { background-image: var(--bg-lava); }
+  .stage[data-bg="shear"]::before { background-image: var(--bg-shear);}
+  .stage[data-bg="rubber"]::before { background-image: var(--bg-rubber); }
+  .stage[data-bg="clay"]::before   { background-image: var(--bg-clay); }
+  .stage[data-bg="chalk"]::before  { background-image: var(--bg-chalk); }
+  .stage[data-bg="book"]::before   { background-image: var(--bg-book); }
+
+.page{
+  position:absolute;
+  inset:0;      /* top/right/bottom/left:0 */
+  display:none;
+}
+
+.page.show{
+  display:block;
+}
+
+  /* ===== title ===== */
+  .title{ 
+    position:absolute; 
+    top:130px; 
+    width:100%; 
+    text-align:center; 
+    font-size:125px; 
+    text-shadow:0 3px 0 #000; 
+  }
+  .btn{
+    position:absolute; 
+    margin-top:100px; 
+    left:50%; 
+    transform:translateX(-50%);
+    background:var(--ui-brown); 
+    border:8px solid var(--ui-brown-dark); 
+    border-radius:18px;
+    text-align:center; 
+    padding:18px 24px; 
+    width:560px; 
+    font-size:28px; 
+    cursor:default;
+  }
+  .btn.short{ 
+    margin-top:125px; 
+    width:460px; 
+    font-size:26px; 
+  }
+  .btn.focus{ 
+    box-shadow:0 0 0 6px #fff inset; 
+  }
+  .rock{
+    position:absolute; 
+    top:22px; 
+    left:22px; 
+    width:66px; 
+    height:54px;
+    background-image:var(--rock-img); 
+    background-size:100px; 
+    background-repeat:no-repeat; 
+    background-position:center;
+    filter:drop-shadow(0 3px 0 #000);
+  }
+  .rock.focus{ 
+    outline:6px solid #fff; 
+    outline-offset:6px; 
+    border-radius:12px; 
+  }
+  .controls-img{ 
+    position:absolute; 
+    right:22px; 
+    bottom:22px; 
+    width:210px; 
+    image-rendering:pixelated; 
+    filter:drop-shadow(0 3px 0 #000); 
+    user-select:none; 
+    pointer-events:none; 
+  }
+
+  /* ===== settings / credits ===== */
+  .hdr{
+    position:absolute; 
+    left:49.5%; 
+    transform:translateX(-50%); 
+    top:28px; 
+    font-size:40px;
+    background:var(--ui-brown); 
+    border:6px solid var(--ui-brown-dark); 
+    padding:10px 18px; 
+    border-radius:14px;
+  }
+  .panel{ 
+    position:absolute; 
+    left:50%; 
+    transform:translateX(-50%); 
+    top:150px; 
+    width:760px; 
+    height:420px; 
+    background:var(--panel); 
+    border:8px solid var(--panel-dark); 
+    border-radius:18px; 
+  }
+  .panel.settings{ 
+    top:165px; 
+    height:300px; 
+  }
+
+  .slider{ 
+    position:absolute; 
+    left:50%; 
+    transform:translateX(-50%); 
+    width:640px; 
+    height:64px; 
+    background:var(--ui-brown-dark); 
+    border-radius:16px; 
+    top:var(--y); 
+    border:4px solid #000; 
+  }
+  .slider .inner{ 
+    position:absolute; 
+    left:14px; 
+    right:14px; 
+    top:14px; 
+    bottom:14px; 
+    background:#fff; 
+    border-radius:12px; 
+  }
+  .slider .knob{ 
+    position:absolute; 
+    top:-20px; 
+    width:100px; 
+    height:100px; 
+    background-image:var(--rock-img); 
+    background-size:80% 80%; 
+    background-position:center; 
+    background-repeat:no-repeat; 
+    filter:drop-shadow(0 3px 0 #000); 
+    transition:left .06s linear; 
+  }
+  .slider.focus{ 
+    box-shadow:0 0 0 6px #fff inset; 
+  }
+  .slider .label{ 
+    position:absolute; 
+    top:-35px; 
+    left:6px; 
+    font-size:30px; 
+  }
+
+  .cols{ 
+    position:absolute; 
+    inset:16px; 
+    display:grid; 
+    grid-template-columns:2fr 1fr; 
+    gap:16px; 
+  }
+  .col{ 
+    background:rgba(0,0,0,.25); 
+    border:4px solid #000; 
+    border-radius:12px; 
+    padding:2px 14px; 
+    line-height:1.35; 
+    white-space:pre-line; 
+    text-align:justify; 
+  }
+  #credits-left{ 
+    font-size:30px; 
+  }
+  .credits-foot{ 
+    position:relative; 
+    left:52.5%; 
+    transform:translateX(-50%); 
+    bottom:-464px; 
+    font-size:30px; 
+  }
+
+  /* ===== character select / name ===== */
+  .char-grid{
+    position:absolute; 
+    left:40%; 
+    transform:translateX(-50%); 
+    bottom:145px;
+    display:grid; 
+    grid-template-columns:repeat(3,1fr); 
+    gap:26px; 
+    width:600px;
+  }
+  .char-card{ 
+    position:relative; 
+    width:250px; 
+    height:360px; 
+    background:#0a0a0a; 
+    border-radius:10px; 
+    border:4px solid #111; 
+    overflow:hidden; 
+  }
+  .char-card::before{ 
+    content:""; 
+    position:absolute; 
+    inset:25px 24px 24px 24px; 
+    background-size:contain; 
+    background-repeat:no-repeat; 
+    background-position:center; 
+    filter:drop-shadow(0 6px 0 #000); 
+  }
+  .char-0::before{ background-image:var(--char1); }
+  .char-1::before{ background-image:var(--char2); }
+  .char-2::before{ background-image:var(--char3); }
+  .char-card.focus{ box-shadow:0 0 0 6px #fff inset; }
+
+  .foot-hint{ 
+    position:absolute; 
+    left:50%; 
+    transform:translateX(-50%); 
+    bottom:26px; 
+    font-size:30px; 
+  }
+
+  #page-name .char-card{ 
+    width:260px; 
+    height:360px; 
+    left:80px; 
+    bottom:25px; 
+  }
+  #page-name .char-grid{ 
+    width:300px; 
+  }
+
+  .name-box{
+    position:absolute; 
+    left:50%; 
+    transform:translateX(-50%); 
+    bottom:80px;
+    width:880px; 
+    height:66px; 
+    background:var(--ui-brown);
+    border:8px solid var(--ui-brown-dark); 
+    border-radius:20px;
+    display:grid; 
+    grid-template-columns:220px 1fr; 
+    align-items:center; 
+    padding:0 16px;
+  }
+  .name-box .prompt{ 
+    opacity:.95; 
+    font-size:45px; 
+  }
+  .name-box .typed{ 
+    color:var(--white); 
+    overflow:hidden; 
+    text-overflow:ellipsis; 
+    white-space:nowrap; 
+    font-size:45px; 
+  }
+
+  /* ===== Intro Scene ===== */
+  .intro-screen{
+    position:absolute; 
+    inset:0; 
+    display:grid; 
+    place-items:center; 
+    background:#000; 
+    color:#fff; 
+    padding:48px 80px; 
+    text-align:center;
+  }
+  .intro-wrap{ 
+    max-width:980px; 
+  }
+  .intro-text{ 
+    font-size:58px; 
+    line-height:1.25; 
+    letter-spacing:2px; 
+    text-shadow:0 3px 0 #000; 
+    margin:0; 
+  }
+  .intro-hint{
+    margin-top:32px;
+    font-size:30px;
+  }
+
+  /* ===== fade page ===== */
+  #page-fade .overlay{ 
+    position:absolute; 
+    inset:0; 
+    background:#000; 
+    opacity:0; 
+    animation:fadeInOut 1.0s ease-in-out forwards; 
+  }
+  @keyframes fadeInOut{ 
+    0%{opacity:0} 
+    30%{opacity:1} 
+    70%{opacity:1} 
+    100%{opacity:0} 
+  }
+
+  /* ===== character book fade scene ===== */
+  .book-fade-wrap{
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    background:#000;
+  }
+  .book-splash{
+    width:100%;
+    height:100%;
+    background-size:contain;
+    background-repeat:no-repeat;
+    background-position:center;
+    opacity:0;
+    animation:bookFadeIn 1s ease-out forwards;
+  }
+  @keyframes bookFadeIn{
+    0%{ opacity:0; transform:scale(1.05); }
+    100%{ opacity:1; transform:scale(1); }
+  }
+
+  /* ===== library scene ===== */
+  .hint-top{ 
+    position:absolute; 
+    top:16px; 
+    left:50%; 
+    transform:translateX(-50%); 
+    background:rgba(0,0,0,.45); 
+    border:4px solid #000; 
+    border-radius:10px; 
+    padding:6px 12px; 
+    font-size:28px; 
+  }
+  .hint-btm-left{ 
+    position:absolute; 
+    top:635px; 
+    left:10px; 
+    transform:translateX(-50%); 
+    background:rgba(0,0,0,.45); 
+    border:2px solid #000; 
+    border-radius:10px; 
+    padding:6px 12px; 
+    font-size:16px; 
+  }
+  .sprite{ 
+    position:absolute; 
+    width:96px; 
+    height:128px; 
+    background-size:contain; 
+    background-repeat:no-repeat; 
+    background-position:center; 
+    image-rendering:pixelated; 
+  }
+  .plr-start{ left:90px; top:138px; }
+  .npc-jock{  left:410px; top:330px; }
+  .npc-mean{  left:820px; top:100px; }
+  .npc-nerd{  left:270px; top:400px; }
+  .npc-clown{ left:940px; top:400px; }
+
+  .dlg{
+    position:absolute; 
+    left:30px; 
+    right:30px; 
+    bottom:24px;
+    background:#fff; 
+    color:#111; 
+    border:12px solid #000; 
+    border-radius:40px;
+    padding:26px 28px 26px 290px; 
+    min-height:150px; 
+    box-shadow:0 10px 0 rgba(0,0,0,.15) inset;
+  }
+  .dlg .name{ 
+    position:absolute; 
+    left:290px; 
+    top:-30px; 
+    background:#fff; 
+    padding:6px 14px; 
+    border:6px solid #000; 
+    border-radius:12px; 
+    font-size:34px; 
+  }
+  .dlg .face{ 
+    position:absolute; 
+    left:40px; 
+    bottom:-70px; 
+    width:400px; 
+    height:400px; 
+    background-size:contain; 
+    background-repeat:no-repeat; 
+    background-position:bottom left; 
+  }
+  .dlg .nerd{ left:10px; }
+  .dlg .clown{ left:-3px; }
+  .dlg .face.teacher {
+    width:425px;
+    height:425px;
+    left:-70px;
+    bottom:-125px;
+  }
+  .dlg .text{ 
+    font-size:45px; 
+    line-height:1.25; 
+  }
+
+  /* shared movable player */
+  #scene-player{ 
+    width:96px; 
+    height:128px; 
+  }
+  .toast{ 
+    position:absolute; 
+    left:50%; 
+    transform:translateX(-50%); 
+    top:16px; 
+    background:rgba(0,0,0,.75); 
+    border:4px solid #000; 
+    color:#fff; 
+    padding:8px 14px; 
+    border-radius:12px; 
+    font-size:26px; 
+    display:none; 
+  }
+
+  /* ===== ravine scene ===== */
+  .rvn-mean{   position:absolute; left:250px; top:200px;   width:96px; height:128px; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated; }
+  .rvn-jock{   position:absolute; left:150px; top:150px;  width:96px; height:128px; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated; }
+  .rvn-player{ position:absolute; left:250px; top:400px;  width:96px; height:128px; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated; background-image:var(--rvn-player); }
+  .rvn-clown{  position:absolute; left:150px; top:300px;  width:96px; height:128px; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated; }
+  .rvn-nerd{   position:absolute; left:150px; top:420px;  width:96px; height:128px; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated; }
+  .rvn-teacher{ position:absolute; right:150px; top:300px; width:96px; height:128px; background-size:contain; background-repeat:no-repeat; background-position:center; image-rendering:pixelated; }
+
+  .ravine-center-text{
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    background:rgba(0,0,0,.65);
+    border-radius:24px;
+    border:6px solid #000;
+    padding:22px 46px;
+    font-size:40px;
+    text-align:center;
+  }
+
+  /* ===== Earthquake Shake Effect ===== */
+  .shake-scene {
+    animation: shake 0.5s infinite;
+  }
+  .shake-strong{
+    animation: shake 0.8s infinite;
+  }
+
+  @keyframes shake {
+    0%   { transform: translate(0px, 0px) rotate(0deg); }
+    20%  { transform: translate(-4px, 2px) rotate(-1deg); }
+    40%  { transform: translate(3px, -3px) rotate(1deg); }
+    60%  { transform: translate(-3px, 3px) rotate(0deg); }
+    80%  { transform: translate(4px, -2px) rotate(1deg); }
+    100% { transform: translate(0px, 0px) rotate(0deg); }
+  }
+
+  .ravine-alert{
+    position:absolute;
+    left:50%; top:80px;
+    transform:translateX(-50%);
+    background:#ff3b3b;
+    color:#fff;
+    border-radius:28px;
+    border:6px solid #000;
+    padding:18px 42px;
+    font-size:38px;
+    text-align:center;
+  }
+
+  /* ===== MINIGAME: W-SPAM RUNNING BAR ===== */
+  .mini-wrap{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding-top:200px;
+    color:#fff;
+    text-shadow:0 3px 0 #000;
+  }
+  .mini-instruction{
+    font-size:38px;
+    margin-bottom:30px;
+  }
+  .mini-timer{
+    font-size:32px;
+    margin-bottom:26px;
+  }
+  .mini-bar{
+    position:relative;
+    width:700px;
+    height:70px;
+    background:#fff;
+    border:8px solid #000;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 6px 0 rgba(0,0,0,.35);
+  }
+  .mini-bar-fill{
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:0%;
+    background:#2ecc71;
+    transition:width .05s linear;
+  }
+  .mini-bar-labels{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    padding:0 18px 6px;
+    font-size:26px;
+    color:#000;
+  }
+  .mini-helper{
+    margin-top:20px;
+    font-size:24px;
+    opacity:0.85;
+  }
+
+  /* ===== GAME OVER PAGE ===== */
+
+#page-gameover-w,
+#page-gameover-timing {
+  position:absolute;
+  inset:0;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:#fff;
+  text-shadow:0 3px 0 #000;
+  display:none; /* hidden until .show */
+}
+
+/* When visible */
+.page.show#page-gameover-w,
+.page.show#page-gameover-timing {
+  display:flex;
+}
+
+.go-title{
+  font-size:120px;
+  letter-spacing:12px;
+  color:#ff3b3b;
+  margin-bottom:20px;
+}
+
+.go-sub{
+  font-size:30px;
+  font-style:italic;
+  margin-bottom:40px;
+}
+
+.go-btn-row{
+  display:flex;
+  gap:40px;
+}
+
+.go-btn{
+  min-width:260px;
+  padding:18px 32px;
+  background:#7d4d34;
+  border:8px solid #502e21;
+  border-radius:18px;
+  font-size:30px;
+  cursor:default;
+}
+
+.go-btn.focus{
+  box-shadow:0 0 0 6px #fff inset;
+}
+
+  .go-title{
+    font-size:120px;
+    letter-spacing:12px;
+    color:#ff3b3b;
+    margin-bottom:20px;
+  }
+  .go-sub{
+    font-size:30px;
+    font-style:italic;
+    margin-bottom:40px;
+  }
+  .go-btn-row{
+    display:flex;
+    gap:40px;
+  }
+  .go-btn{
+    min-width:260px;
+    padding:18px 32px;
+    background:#7d4d34;
+    border:8px solid #502e21;
+    border-radius:18px;
+    font-size:30px;
+    cursor:default;
+  }
+  .go-btn.focus{
+    box-shadow:0 0 0 6px #fff inset;
+  }
+
+  /* ===== MINIGAME 2: TIMING GAME ===== */
+.timing-wrap{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-shadow:0 3px 0 #000;
+  color:#fff;
+}
+
+.timing-instruction{
+  font-size:40px;
+  margin-bottom:40px;
+  text-align:center;
+}
+
+.timing-bar{
+  position:relative;
+  width:700px;
+  height:80px;
+  background:#ffffff;
+  border:10px solid #000;
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 6px 0 rgba(0,0,0,.35);
+}
+
+.target-zone{
+  position:absolute;
+  left:40%;
+  width:20%;
+  top:0; bottom:0;
+  background:rgba(255,0,0,0.35);
+  border-left:4px solid #000;
+  border-right:4px solid #000;
+}
+
+.moving-bar{
+  position:absolute;
+  width:120px;
+  height:100%;
+  background:#2ecc71;
+  border-right:6px solid #000;
+  border-left:6px solid #000;
+  left:0;
+  transition:left .03s linear;
+}
+
+.timing-result{
+  margin-top:40px;
+  font-size:32px;
+  opacity:0;
+  text-shadow:0 3px 0 #000;
+  transition:opacity .3s;
+}
+
+.quiz-wrap{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  color:white;
+  text-shadow:0 3px 0 #000;
+}
+
+.quiz-question{
+  font-size:48px;
+  max-width:900px;
+  text-align:center;
+  margin-bottom:40px;
+}
+
+.quiz-options{
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.quiz-opt{
+  background:#7d4d34;
+  border:8px solid #502e21;
+  padding:20px 40px;
+  border-radius:18px;
+  font-size:32px;
+  cursor:default;
+}
+
+.quiz-opt.focus{
+  box-shadow:0 0 0 6px white inset;
+}
+
+.quiz-lives{
+  margin-top:40px;
+  font-size:32px;
+}
+
+/* QUIZ RESULT */
+#page-quiz-result{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  color:white;
+}
+
+.quiz-result-title{
+  font-size:80px;
+  margin-bottom:20px;
+}
+
+/* QUIZ GAME OVER */
+#page-quiz-gameover {
+  position:absolute;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:#fff;
+  text-shadow:0 3px 0 #000;
+}
+
+.page.show#page-quiz-gameover {
+  display:flex;
+}
+
+#page-quiz-gameover .go-btn-row {
+  display:flex;
+  gap:40px;
+}
+
+/* QUIZ PASS ENDING */
+#page-quiz-ending {
+  position:absolute;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  color:#fff;
+  padding:60px;
+  text-align:center;
+}
+
+.page.show#page-quiz-ending {
+  display:flex;
+}
+
+.ending-text {
+  font-size:48px;
+  max-width:900px;
+  line-height:1.3;
+  margin-bottom:60px;
+}
+
+.ending-hint {
+  font-size:28px;
+  opacity:0.7;
+}
+
+#bgm-main, #bgm-adv {
+  display:none;
+}
+
+</style>
+</head>
+
+<body>
+<div class="stage-wrap">
+  <div class="stage" id="stage" tabindex="0" data-bg="title">
+
+<audio id="bgm-main" src="Main_Menu.mp3" loop></audio>
+<audio id="bgm-adv" src="Desert_background.mp3" loop></audio>
+
+    <!-- 1 TITLE -->
+    <section class="page show" id="page-title">
+      <div class="title">UNTITLED GEOLOGY GAME</div>
+      <div class="btn" id="btn-start" style="top:260px;">START</div>
+      <div class="btn short" id="btn-credits" style="top:340px;">CREDITS</div>
+      <div class="rock" id="btn-settings" title="Settings"></div>
+      <img class="controls-img" src="control.png" alt="Controls: WASD + Space">
+    </section>
+
+    <!-- 2 SETTINGS -->
+    <section class="page" id="page-settings">
+      <div class="hdr">SETTINGS</div>
+      <div class="panel settings"></div>
+      <div class="slider" id="slider-vol" style="--y:230px;">
+        <div class="label">VOLUME</div>
+        <div class="inner"></div>
+        <div class="knob" style="left:20%"></div>
+      </div>
+      <div class="slider" id="slider-bri" style="--y:350px;">
+        <div class="label">BRIGHTNESS</div>
+        <div class="inner"></div>
+        <div class="knob" style="left:50%"></div>
+      </div>
+      <div class="foot-hint">W/S: SELECT SLIDER &nbsp;&nbsp; A/D: ADJUST &nbsp;&nbsp; SPACE: BACK</div>
+    </section>
+
+    <!-- 3 CREDITS -->
+    <section class="page" id="page-credits">
+      <div class="hdr">CREDITS</div>
+      <div class="panel">
+        <div class="cols">
+          <div class="col" id="credits-left">
+Untitled Geology Game is a pixelated RPG adventure where you and your friends are transported into the world of Materials Science — exploring stress, strain, and strength through interactive challenges and retro-style gameplay inspired by Pokemon Deluge RPG.
+          </div>
+          <div class="col" id="credits-right">
+PROGRAMMER 
+  Sumampong
+  
+RESEARCHERS
+  Aguanta
+  Mahusay
+
+VOICE ACTORS
+  Dabon .......... Mean Girl
+  Bungcaras ...... Jock
+  Esolana ........ Nerd
+  Rennier ........ Class Clown
+  Gines .......... Seismologist
+
+GRAPHICS
+  All Members
+          </div>
+        </div>
+        <div class="credits-foot">SUBMITTED TO: SIR SEAN POLICARPIO • PRESS SPACE TO GO BACK</div>
+      </div>
+    </section>
+
+    <!-- 4 CHARACTER SELECT -->
+    <section class="page" id="page-characters">
+      <div class="hdr">CHOOSE YOUR CHARACTER</div>
+      <div class="char-grid">
+        <div class="char-card char-0" id="char0"></div>
+        <div class="char-card char-1" id="char1"></div>
+        <div class="char-card char-2" id="char2"></div>
+      </div>
+      <div class="foot-hint">A/D: SWITCH &nbsp;&nbsp; SPACE: ENTER</div>
+    </section>
+
+    <!-- 5 NAME -->
+    <section class="page" id="page-name">
+      <div class="hdr">CHOOSE YOUR CHARACTER</div>
+      <div class="char-grid" style="grid-template-columns:1fr; width:200px;">
+        <div class="char-card char-0" id="chosen-solo"></div>
+      </div>
+      <div class="name-box">
+        <div class="prompt">ENTER NAME:</div>
+        <div class="typed" id="typed-name"></div>
+      </div>
+      <div class="foot-hint">PRESS SPACE TO ENTER</div>
+    </section>
+
+    <!-- 6 INTRO -->  
+    <section class="page" id="page-intro-6">
+      <div class="intro-screen">
+        <div class="intro-wrap">
+          <p class="intro-text">
+            It was an ordinary morning at UP High. The classroom buzzed with excitement
+            as students rushed to sign up for their final Science Fair project of the year.
+            Posters hung everywhere, teachers hurried around with clipboards, and groups
+            formed left and right.
+          </p>
+          <div class="intro-hint">PRESS SPACE TO CONTINUE</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 INTRO -->
+    <section class="page" id="page-intro-7">
+      <div class="intro-screen">
+        <div class="intro-wrap">
+          <p class="intro-text">
+            In a room, four students were grouped, not by choice, but because they were
+            the only ones left without a group. None of them expected what would happen
+            next… but their project was about to become more than just another school
+            requirement…<br>See for yourself…
+          </p>
+          <div class="intro-hint">PRESS SPACE TO CONTINUE</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fade page (reused) -->
+    <section class="page" id="page-fade">
+      <div class="overlay"></div>
+    </section>
+
+    <!-- 8 LIBRARY SETUP -->
+    <section class="page" id="page-lib-setup">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('right_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+    </section>
+
+    <!-- 9–13 DIALOGUES (typing effect) -->
+    <section class="page" id="page-dlg-8">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('right_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_jock.png')"></div>
+        <div class="name">JOCK</div>
+        <div class="text">Ugh! Why do we have to do this project about stress and strain anyway?! Mag ML nalang ta oi.</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-9">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('right_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('right_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_mean.png')"></div>
+        <div class="name">MEAN GIRL</div>
+        <div class="text">Oh please, you act as if you’re even doing something.</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-10">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('left_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face nerd" style="background-image:url('dialogue_nerd.png')"></div>
+        <div class="name">NERD</div>
+        <div class="text" style="font-size:34px;">Well, we can’t just ChatGPT everything. We actually have to find books. I mean, these things are so ancient, they probably still think the Earth is flat!</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-11">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face clown" style="background-image:url('dialogue_clown.png')"></div>
+        <div class="name">CLASS CLOWN</div>
+        <div class="text">Hey, if we find the right one, maybe it’ll have a map to buried treasure or something.</div>
+      </div>
+    </section>
+
+    <section class="page" id="page-dlg-12">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_mean.png')"></div>
+        <div class="name">MEAN GIRL</div>
+        <div class="text">Ugh! Let’s wrap this up so I can get back to my actual hobbies… Check the shelves.</div>
+      </div>
+    </section>
+
+    <!-- 14 LIBRARY PLAY -->
+    <section class="page" id="page-lib-play">
+      <div class="toast" id="toast">No books about stress and strain here.</div>
+
+      <div class="hint-btm-left" style="transform:none;">
+        Find the book by pressing SPACE on the sides of the correct bookshelf
+      </div>
+
+      <div class="sprite npc-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="sprite npc-mean"  style="background-image:url('left_mean.png')"></div>
+      <div class="sprite npc-nerd"  style="background-image:url('front_nerd.png')"></div>
+      <div class="sprite npc-clown" style="background-image:url('front_clown.png')"></div>
+      <!-- player injected here -->
+    </section>
+
+    <!-- 15 PLAYER FOUND BOOK – FADE-IN SPLASH -->
+    <section class="page" id="page-dlg-14">
+      <div class="book-fade-wrap">
+        <div class="book-splash" id="book-splash"></div>
+      </div>
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+    </section>
+
+    <!-- 16 – ARRIVE IN RAVINE, PARTY ON LEFT, NO DIALOGUE -->
+    <section class="page" id="page-rav-16">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+    </section>
+
+    <!-- 17 – JOCK DIALOGUE -->
+    <section class="page" id="page-rav-17">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_jock.png')"></div>
+        <div class="name">JOCK</div>
+        <div class="text">
+WHERE ARE WE!? This doesn’t look like our school, and I bet there’s no Wi-Fi here.
+        </div>
+      </div>
+    </section>
+
+    <!-- 18 – MEAN GIRL DIALOGUE -->
+    <section class="page" id="page-rav-18">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_mean.png')"></div>
+        <div class="name">MEAN GIRL</div>
+        <div class="text">
+Now this is just great. I’m all covered in dirt!
+        </div>
+      </div>
+    </section>
+
+    <!-- 19 – PLAYER DIALOGUE (depends on chosen character) -->
+    <section class="page" id="page-rav-19">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+      <div class="dlg">
+        <div class="face" id="dlg-face-player-19" style="left:3px"></div>
+        <div class="name player-name" id="dlg-name-player-19">PLAYER</div>
+        <div class="text">
+Guys… I don’t think we’re in the library anymore.
+        </div>
+      </div>
+    </section>
+
+    <!-- 20 – CLOWN DIALOGUE -->
+    <section class="page" id="page-rav-20">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_clown.png'); left:3px"></div>
+        <div class="name">CLASS CLOWN</div>
+        <div class="text">
+HEY INDIANA JONES, or should I say, Indiana rocks!
+        </div>
+      </div>
+    </section>
+
+    <!-- 21 – TEXT: MYSTERIOUS FIGURE -->
+    <section class="page" id="page-rav-21">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+      <div class="ravine-center-text">A MYSTERIOUS FIGURE APPROACHES</div>
+    </section>
+
+    <!-- 22 – TEACHER APPEARS -->
+    <section class="page" id="page-rav-22">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+      <div class="rvn-teacher" style="background-image:url('front_teacher.png')"></div>
+
+      <div class="dlg">
+        <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+        <div class="name">TEACHER</div>
+        <div class="text">
+How did you guys enter here?, perhaps by a book?
+        </div>
+      </div>
+    </section>
+
+    <!-- 23 – JOCK -->
+    <section class="page" id="page-rav-23">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+      <div class="rvn-teacher" style="background-image:url('front_teacher.png')"></div>
+
+      <div class="dlg">
+        <div class="face" style="background-image:url('dialogue_jock.png')"></div>
+        <div class="name">JOCK</div>
+        <div class="text">
+Yes?, that dusty old book, ka kapoy ani oi
+        </div>
+      </div>
+    </section>
+
+    <!-- 24 – NERD -->
+    <section class="page" id="page-rav-24">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+      <div class="rvn-teacher" style="background-image:url('front_teacher.png')"></div>
+
+      <div class="dlg">
+        <div class="face nerd" style="background-image:url('dialogue_nerd.png')"></div>
+        <div class="name">NERD</div>
+        <div class="text">
+Wait, first off, how do we get back?
+        </div>
+      </div>
+    </section>
+
+    <!-- 25 – TEACHER -->
+    <section class="page" id="page-rav-25">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+      <div class="rvn-teacher" style="background-image:url('front_teacher.png')"></div>
+
+      <div class="dlg">
+        <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+        <div class="name">TEACHER</div>
+        <div class="text">
+Well, you must all follow me!
+        </div>
+      </div>
+    </section>
+
+    <!-- 26 – TEXT: GROUND SHAKES -->
+    <section class="page shake-scene" id="page-rav-26">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+      <div class="rvn-teacher" style="background-image:url('front_teacher.png')"></div>
+    </section>
+
+    <!-- 27 – TEACHER DIALOGUE -->
+    <section class="page" id="page-rav-27">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+      <div class="rvn-teacher" style="background-image:url('front_teacher.png')"></div>
+
+      <div class="dlg">
+        <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+        <div class="name">TEACHER</div>
+        <div class="text">
+Let’s go! Run, everybody, run!
+        </div>
+      </div>
+    </section>
+
+    <!-- 28 – ALERT: ESCAPE -->
+    <section class="page" id="page-rav-28">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+      <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+      <div class="rvn-player"></div>
+      <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+      <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+      <div class="rvn-teacher" style="background-image:url('front_teacher.png')"></div>
+
+      <div class="ravine-alert">
+        the walls are closing in on you...<br>ESCAPE!!
+      </div>
+    </section>
+    
+    <!-- RUN INTRO: yelling teacher photo with shake -->
+    <section class="page shake-strong" id="page-run-intro">
+      <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+      <!-- background is 33.png via data-bg="run-intro" -->
+    </section>
+
+    <!-- MINIGAME: SPAM W -->
+    <section class="page" id="page-mini1">
+      <!-- background is 34.png via data-bg="mini1" -->
+      <div class="mini-wrap">
+        <div class="mini-instruction">SPAM W TO INCREASE RUNNING SPEED (in mph)</div>
+        <div class="mini-timer" id="mini-timer">Time: 10.0s</div>
+        <div class="mini-bar">
+          <div class="mini-bar-fill" id="mini-bar-fill"></div>
+          <div class="mini-bar-labels">
+            <span>0</span><span>5</span><span>10</span><span>15</span>
+          </div>
+        </div>
+        <div class="mini-helper">Reach at least 10 mph before time runs out!</div>
+      </div>
+    </section>
+
+    <!-- GAME OVER PAGE (29) -->
+    <section class="page" id="page-gameover-w">
+      <!-- background is 36.png via data-bg="gameover" -->
+      <div class="go-title">GAME OVER!</div>
+      <div class="go-sub">"Dust to dust"... you really took that literally, huh?</div>
+      <div class="go-btn-row">
+        <div class="go-btn focus" id="go-try">TRY AGAIN</div>
+        <div class="go-btn" id="go-skip">SKIP MINI GAME</div>
+      </div>
+    </section>
+
+    <!-- PAGE 30 PLACEHOLDER AFTER MINIGAME -->
+<section class="page" id="page-postmini-30">
+  <div class="intro-screen">
+    <div class="intro-wrap">
+      <p class="intro-text">
+        You narrowly escape your heart still racing from the sprint…
+      </p>
+      <div class="intro-hint">PRESS SPACE TO CONTINUE</div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-30">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Great! You all made it back in one piece. Not bad..."></div>
+  </div>
+</section>
+
+<section class="page" id="page-31">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face clown" style="background-image:url('dialogue_clown.png')"></div>
+    <div class="name">CLASS CLOWN</div>
+    <div class="text" data-full="That was the best morning jog ever!"></div>
+  </div>
+</section>
+
+<section class="page" id="page-32">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face jock" style="background-image:url('dialogue_jock.png')"></div>
+    <div class="name">JOCK</div>
+    <div class="text" data-full="Whew that was close"></div>
+  </div>
+</section>
+
+<section class="page" id="page-33">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face nerd" style="background-image:url('dialogue_nerd.png')"></div>
+    <div class="name">NERD</div>
+    <div class="text" data-full="Excuse me sir, Geological processes often take thousands or even millions of years, how did that happen so fast?"></div>
+  </div>
+</section>
+
+<section class="page" id="page-34">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Well, in this dimension, time moves pretty fast so anyways"></div>
+  </div>
+</section>
+
+
+<section class="page" id="page-35">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="What we felt is a force exerted on a rock mass forcing it to be pushed together. Think of how mountains are formed."></div>
+  </div>
+</section>
+
+<section class="page" id="page-36">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="This was what we call, the compressional force."></div>
+  </div>
+</section>
+
+<!-- 37 – TEACHER explains tension -->
+<section class="page" id="page-37">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <!-- character sprites just like in page 30–34 -->
+  <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Everyone relax , Alright, welcome to Geology 101: Surviving the Earth’s Crust. Today’s topic? Stress and strain."></div>
+  </div>
+</section>
+
+<!-- 38 – JOCK -->
+<section class="page" id="page-38">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face" style="background-image:url('dialogue_jock.png')"></div>
+    <div class="name">JOCK</div>
+    <div class="text" data-full="Stress, Oh I experience that during basketball training!"></div>
+  </div>
+</section>
+
+<!-- 39 – CLASS CLOWN -->
+<section class="page" id="page-39">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face clown" style="background-image:url('dialogue_clown.png')"></div>
+    <div class="name">CLASS CLOWN</div>
+    <div class="text" data-full="Strain?, like when you eat too much Chinese foo-"></div>
+  </div>
+</section>
+
+<!-- 40 – New tension crack lava scene (no dialogue) -->
+<section class="page" id="page-40">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+</section>
+
+<!-- 41 – Teacher explains tension strain -->
+<section class="page" id="page-41">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="This… is tension strain. The Earth’s crust is being pulled apart, creating cracks like this one."></div>
+  </div>
+</section>
+
+<!-- 42 – Teacher warns the class -->
+<section class="page" id="page-42">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"    style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"    style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown"   style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"    style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Everyone, hurry up and cross! This gap is widening by the second!"></div>
+  </div>
+</section>
+
+<!-- TIMING MINIGAME PAGE -->
+<section class="page" id="page-timing-mini">
+  <div class="timing-wrap">
+    <div class="timing-instruction">PRESS SPACE WHEN THE BAR ENTERS THE RED ZONE IN ORDER TO JUMP ACROSS</div>
+
+    <div class="timing-bar">
+      <div class="target-zone"></div>
+      <div class="moving-bar" id="timing-moving"></div>
+    </div>
+
+    <div class="timing-result" id="timing-result"></div>
+  </div>
+</section>
+
+<section class="page" id="page-gameover-timing">
+  <div class="go-title">GAME OVER!</div>
+  <div class="go-sub">"Stress? High. Tension? Higher. Your survival rate? Low."</div>
+  <div class="go-btn-row">
+    <div class="go-btn focus" id="timing-go-try">TRY AGAIN</div>
+    <div class="go-btn" id="timing-go-skip">SKIP MINI GAME</div>
+  </div>
+</section>
+
+<!-- PAGE 43 -->
+<section class="page" id="page-43">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="What we saw is called tension force!"></div>
+  </div>
+</section>
+
+<!-- PAGE 44 -->
+<section class="page" id="page-44">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="This force stretches rocks in two opposite directions, leading to fractures and joints."></div>
+  </div>
+</section>
+
+<!-- PAGE 45 -->
+<section class="page" id="page-45">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_nerd.png')"></div>
+    <div class="name">NERD</div>
+    <div class="text" data-full="So basically, the rocks never stop moving? and rocks take all the pressure?"></div>
+  </div>
+</section>
+
+<!-- PAGE 46 -->
+<section class="page" id="page-46">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Exactly!"></div>
+  </div>
+</section>
+
+<section class="page" id="page-47">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+</section>
+
+<section class="page" id="page-48">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="This is shear stress, folks!"></div>
+  </div>
+</section>
+
+<section class="page" id="page-49">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Shear stress is a force when applied, it causes rocks to slide past each other."></div>
+  </div>
+</section>
+
+<section class="page" id="page-50">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Think of the San Andres fault in California, and other faults."></div>
+  </div>
+</section>
+
+<section class="page" id="page-51">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face" id="face-player-51"></div>
+    <div class="name" id="name-player-51">PLAYER</div>
+    <div class="text" data-full="Oh so that's how it's formed, no wonder it has zigzags"></div>
+  </div>
+</section>
+
+<section class="page" id="page-52">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Good job everybody, for surviving the three types of stress. But stress is only half the story. Now comes strain: how rocks respond to stress."></div>
+  </div>
+</section>
+
+<section class="page" id="page-53">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face clown" style="background-image:url('dialogue_clown.png')"></div>
+    <div class="name">CLASS CLOWN</div>
+    <div class="text" data-full="The ground has a huge crack, get it guys?"></div>
+  </div>
+</section>
+
+<section class="page" id="page-54">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face" style="background-image:url('dialogue_mean.png')"></div>
+    <div class="name">MEAN GIRL</div>
+    <div class="text" data-full="  Just Shut up for a second? , we are in a another dimension and here you are straining our ears."></div>
+  </div>
+</section>
+
+<section class="page" id="page-55">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+
+  <div class="rvn-mean"  style="background-image:url('front_mean.png')"></div>
+  <div class="rvn-jock"  style="background-image:url('front_jock.png')"></div>
+  <div class="rvn-player"></div>
+  <div class="rvn-clown" style="background-image:url('front_clown.png')"></div>
+  <div class="rvn-nerd"  style="background-image:url('front_nerd.png')"></div>
+
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="You're not wrong there. But scientifically speaking… there are three responses to stress: elastic deformation, plastic deformation, and fracture."></div>
+  </div>
+</section>
+
+<!-- PAGE 56 – Elastic Deformation -->
+<section class="page" id="page-56">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Elastic deformation is when a rock is stressed and deforms, but when the stress is removed… bam! It goes back to its original shape."></div>
+  </div>
+</section>
+
+<!-- PAGE 57 – NERD -->
+<section class="page" id="page-57">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face nerd" style="background-image:url('dialogue_nerd.png')"></div>
+    <div class="name">NERD</div>
+    <div class="text" data-full="So, just like a rubber band, it does not break?"></div>
+  </div>
+</section>
+
+<!-- PAGE 58 – TEACHER -->
+<section class="page" id="page-58">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="BANG, exactly!"></div>
+  </div>
+</section>
+
+<!-- PAGE 59 – Plastic Deformation -->
+<section class="page" id="page-59">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Now, plastic deformation is when the rock bends or changes shape… but it doesn’t return to its original form."></div>
+  </div>
+</section>
+
+<!-- PAGE 60 – MEAN GIRL -->
+<section class="page" id="page-60">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face" style="background-image:url('dialogue_mean.png')"></div>
+    <div class="name">MEAN GIRL</div>
+    <div class="text" data-full="Ewww, looks like chewing gum."></div>
+  </div>
+</section>
+
+<!-- PAGE 61 – TEACHER -->
+<section class="page" id="page-61">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="When rocks can’t take the stress anymore, they break or fracture. Like when this chalk breaks in half. This is my only chalk so… no breaking today."></div>
+  </div>
+</section>
+
+<!-- PAGE 62 – NERD -->
+<section class="page" id="page-62">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face nerd" style="background-image:url('dialogue_nerd.png')"></div>
+    <div class="name">NERD</div>
+    <div class="text" data-full="So once it breaks… it's permanent?"></div>
+  </div>
+</section>
+
+<!-- PAGE 63 – JOCK -->
+<section class="page" id="page-63">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face" style="background-image:url('dialogue_jock.png')"></div>
+    <div class="name">JOCK</div>
+    <div class="text" data-full="So let me get this right — rocks can either bounce back, bend a little, or just… break?"></div>
+  </div>
+</section>
+
+<!-- PAGE 64 – TEACHER -->
+<section class="page" id="page-64">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Yes! That’s a bingo! You kids get it now!"></div>
+  </div>
+</section>
+
+<!-- PAGE 65 – NERD -->
+<section class="page" id="page-65">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face nerd" style="background-image:url('dialogue_nerd.png')"></div>
+    <div class="name">NERD</div>
+    <div class="text" data-full="LOOK! THE MAGIC BOOK — IT’S LEVITATING!"></div>
+  </div>
+</section>
+
+<!-- PAGE 66 – TEACHER -->
+<section class="page" id="page-66">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Ah. It seems this world has taught you everything it can. Now’s the time to check!"></div>
+  </div>
+</section>
+
+<!-- PAGE 67 – TEACHER -->
+<section class="page" id="page-67">
+  <div class="hint-top">PRESS SPACE TO CONTINUE</div>
+  <div class="dlg">
+    <div class="face teacher" style="background-image:url('dialogue_teacher.png')"></div>
+    <div class="name">TEACHER</div>
+    <div class="text" data-full="Get all ten of my questions right, and you will return to your world. If not… I’m sure you kids can adapt here."></div>
+  </div>
+</section>
+
+<!-- QUIZ PAGE -->
+<section class="page" id="page-quiz">
+  <div class="quiz-wrap">
+
+    <div id="quiz-question" class="quiz-question"></div>
+
+    <div id="quiz-lives" class="quiz-lives">Lives: 3</div>
+
+    <div class="quiz-options">
+      <div id="quiz-opt-0" class="quiz-opt">Option A</div>
+      <div id="quiz-opt-1" class="quiz-opt">Option B</div>
+      <div id="quiz-opt-2" class="quiz-opt">Option C</div>
+      <div id="quiz-opt-3" class="quiz-opt">Option D</div>
+    </div>
+
+    <div class="quiz-hint">Use W/S to choose • SPACE to answer</div>
+
+  </div>
+</section>
+
+<!-- QUIZ RESULT PAGE -->
+<section class="page" id="page-quiz-result">
+  <div class="quiz-result-title" id="quiz-result-title"></div>
+</section>
+
+<!-- QUIZ GAME OVER PAGE -->
+<section class="page" id="page-quiz-gameover">
+  <div class="go-title">GAME OVER!</div>
+  <div class="go-sub">"If you fail to prepare, prepare to fail" - Sir Sean</div>
+
+  <div class="go-btn-row">
+    <div class="go-btn focus" id="quiz-go-try">TRY AGAIN</div>
+  </div>
+</section>
+
+<!-- QUIZ PASS ENDING PAGE -->
+<section class="page" id="page-quiz-ending">
+  <div class="ending-wrap">
+    <div class="ending-text">
+      After surviving twisting caves, molten ground, and bending worlds…  
+      they finally returned home.  
+      <br><br>
+      Two years later, they graduated — stronger, wiser,  
+      and forever changed by the world beneath their feet.
+    </div>
+
+    <div class="ending-hint">PRESS SPACE TO RETURN TO TITLE</div>
+  </div>
+</section>
+
+
+    <!-- shared player sprite (library movement) -->
+    <div class="sprite plr-start" id="scene-player" style="display:none;"></div>
+
+  </div>
+</div>
+
+<script>
+/* =========================
+   STATE + ELEMENTS
+   ========================= */
+const STATES = {
+  TITLE:"page-title", SETTINGS:"page-settings", CREDITS:"page-credits",
+  CHAR:"page-characters", NAME:"page-name",
+  INTRO6:"page-intro-6", INTRO7:"page-intro-7",
+  FADE:"page-fade",
+  LIB_SETUP:"page-lib-setup",
+  DLG8:"page-dlg-8", DLG9:"page-dlg-9", DLG10:"page-dlg-10", DLG11:"page-dlg-11", DLG12:"page-dlg-12",
+  PLAY:"page-lib-play",
+  DLG14:"page-dlg-14",
+
+  RAV16:"page-rav-16",
+  RAV17:"page-rav-17",
+  RAV18:"page-rav-18",
+  RAV19:"page-rav-19",
+  RAV20:"page-rav-20",
+  RAV21:"page-rav-21",
+  RAV22:"page-rav-22",
+  RAV23:"page-rav-23",
+  RAV24:"page-rav-24",
+  RAV25:"page-rav-25",
+  RAV26:"page-rav-26",
+  RAV27:"page-rav-27",
+  RAV28:"page-rav-28",
+
+  RUN_INTRO:"page-run-intro",
+  MINI1:"page-mini1",
+  GAMEOVER:"page-gameover-29",
+  POSTMINI:"page-postmini-30",
+
+  PAGE30: "page-30",
+  PAGE31: "page-31",
+  PAGE32: "page-32",
+  PAGE33: "page-33",
+  PAGE34: "page-34",
+  PAGE35: "page-35",
+  PAGE36: "page-36",
+  PAGE37: "page-37",
+  PAGE38: "page-38",
+  PAGE39: "page-39",
+  PAGE40: "page-40",
+  PAGE41: "page-41",
+  PAGE42: "page-42",
+
+  TIMING_MINI: "page-timing-mini",
+  
+  PAGE43: "page-43",
+  PAGE44: "page-44",
+  PAGE45: "page-45",
+  PAGE46: "page-46",
+
+  PAGE47:"page-47",
+  PAGE48:"page-48",
+  PAGE49:"page-49",
+  PAGE50:"page-50",
+  PAGE51:"page-51",
+  PAGE52:"page-52",
+  PAGE53:"page-53",
+  PAGE54:"page-54",
+  PAGE55:"page-55",
+
+  PAGE56:"page-56",
+  PAGE57:"page-57",
+  PAGE58:"page-58",
+
+  PAGE59:"page-59",
+  PAGE60:"page-60",
+
+  PAGE61:"page-61",
+  PAGE62:"page-62",
+  PAGE63:"page-63",
+  PAGE64:"page-64",
+
+  PAGE65:"page-65",
+  PAGE66:"page-66",
+  PAGE67:"page-67",
+
+  QUIZ: "page-quiz",
+  QUIZ_RESULT: "page-quiz-result",
+
+  QUIZ_GAMEOVER: "page-quiz-gameover",
+  QUIZ_ENDING: "page-quiz-ending",
+};
+
+const stage = document.getElementById("stage");
+stage.focus();
+
+/* Show page, set background, move shared player, and (re)start typing when needed */
+function showPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("show"));
+  const pg = document.getElementById(id);
+  pg.classList.add("show");
+
+    /* === MUSIC: MAIN THEME PAGES === */
+  const mainThemePages = new Set([
+    STATES.TITLE,
+    STATES.CREDITS,
+    STATES.SETTINGS,
+    STATES.CHAR,
+    STATES.NAME,
+
+    // Library pages
+    STATES.LIB_SETUP,
+    STATES.DLG8, STATES.DLG9, STATES.DLG10,
+    STATES.DLG11, STATES.DLG12,
+    STATES.PLAY,
+    STATES.DLG14
+  ]);
+
+  /* === MUSIC: ADVENTURE THEME PAGES === */
+  const advThemePages = new Set([
+    STATES.RAV16, STATES.RAV17, STATES.RAV18, STATES.RAV19, STATES.RAV20,
+    STATES.RAV21, STATES.RAV22, STATES.RAV23, STATES.RAV24, STATES.RAV25,
+    STATES.RAV26, STATES.RAV27, STATES.RAV28,
+    STATES.RUN_INTRO,
+    STATES.MINI1,
+    STATES.TIMING_MINI,
+    STATES.PAGE30, STATES.PAGE31, STATES.PAGE32,
+    STATES.PAGE33, STATES.PAGE34, STATES.PAGE35, STATES.PAGE36,
+    STATES.PAGE37, STATES.PAGE38, STATES.PAGE39,
+    STATES.PAGE40, STATES.PAGE41, STATES.PAGE42,
+    STATES.PAGE43, STATES.PAGE44, STATES.PAGE45, STATES.PAGE46,
+    STATES.PAGE47, STATES.PAGE48, STATES.PAGE49, STATES.PAGE50,
+    STATES.PAGE51, STATES.PAGE52, STATES.PAGE53, STATES.PAGE54, STATES.PAGE55,
+    STATES.PAGE56, STATES.PAGE57, STATES.PAGE58,
+    STATES.PAGE59, STATES.PAGE60,
+    STATES.PAGE61, STATES.PAGE62, STATES.PAGE63, STATES.PAGE64,
+    STATES.PAGE65, STATES.PAGE66, STATES.PAGE67,
+    STATES.QUIZ, STATES.QUIZ_RESULT, STATES.QUIZ_GAMEOVER, STATES.QUIZ_ENDING
+  ]);
+
+  // Decide which music should play
+  if (mainThemePages.has(id)){
+    playMainTheme();
+  } else if (advThemePages.has(id)){
+    playAdventureTheme();
+  }
+
+  const libSet = new Set([
+    STATES.LIB_SETUP,STATES.DLG8,STATES.DLG9,STATES.DLG10,
+    STATES.DLG11,STATES.DLG12,STATES.PLAY,STATES.DLG14
+  ]);
+
+  const ravineSet = new Set([
+    STATES.RAV16,STATES.RAV17,STATES.RAV18,STATES.RAV19,STATES.RAV20,
+    STATES.RAV21,STATES.RAV22,STATES.RAV23,STATES.RAV24,
+    STATES.RAV25,STATES.RAV26,STATES.RAV27,STATES.RAV28
+  ]);
+
+// background switching
+if (libSet.has(id)) {
+    stage.dataset.bg = "library";
+}
+else if (ravineSet.has(id)) {
+    stage.dataset.bg = "ravine";
+}
+else if (id === STATES.RUN_INTRO) {
+    stage.dataset.bg = "run-intro";
+}
+else if (id === STATES.MINI1) {
+    stage.dataset.bg = "mini1";
+}
+else if (id === STATES.GAMEOVER) {
+    stage.dataset.bg = "gameover";
+}
+
+else if ([
+  STATES.PAGE30, STATES.PAGE31, STATES.PAGE32,
+  STATES.PAGE33, STATES.PAGE34,
+  STATES.PAGE37, STATES.PAGE38, STATES.PAGE39
+].includes(id)) {
+    stage.dataset.bg = "desert";
+}
+
+else if ([
+  STATES.PAGE35, STATES.PAGE36
+].includes(id)) {
+    stage.dataset.bg = "mountain";
+}
+
+else if ([
+  STATES.PAGE40, STATES.PAGE41, STATES.PAGE42
+].includes(id)) {
+    stage.dataset.bg = "tension";
+}
+
+else if (id === STATES.TIMING_MINI){
+    stage.dataset.bg = "tension"; 
+}
+
+else if ([
+  STATES.PAGE43, STATES.PAGE44, STATES.PAGE45, STATES.PAGE46
+].includes(id)) {
+    stage.dataset.bg = "lava";
+}
+
+else if ([
+  STATES.PAGE47, STATES.PAGE48, STATES.PAGE49,
+  STATES.PAGE50, STATES.PAGE51, STATES.PAGE52,
+  STATES.PAGE53, STATES.PAGE54, STATES.PAGE55
+].includes(id)) {
+    stage.dataset.bg = "shear";
+}
+
+else if ([STATES.PAGE56, STATES.PAGE57, STATES.PAGE58].includes(id)) {
+    stage.dataset.bg = "rubber";
+}
+
+else if ([STATES.PAGE59, STATES.PAGE60].includes(id)) {
+    stage.dataset.bg = "clay";
+}
+
+else if ([STATES.PAGE61, STATES.PAGE62, STATES.PAGE63, STATES.PAGE64].includes(id)) {
+    stage.dataset.bg = "chalk";
+}
+
+else if ([STATES.PAGE65, STATES.PAGE66, STATES.PAGE67].includes(id)) {
+    stage.dataset.bg = "book";
+}
+
+else {
+    stage.dataset.bg = "title";
+}
+  const plr = document.getElementById("scene-player");
+  if (libSet.has(id)){
+    if (id === STATES.DLG14){
+      plr.style.display = "none";
+    } else {
+      pg.appendChild(plr);
+      plr.style.display = "block";
+      if (id !== STATES.PLAY) setPlayerFrame('stand');
+    }
+  } else {
+    plr.style.display = "none";
+  }
+
+  // character-dependent splash art on 15
+  if (id === STATES.DLG14){
+    if (bookSplash){
+      const bookImgs = [
+        "char1_book.png",
+        "char2_book.png",
+        "char3_book.png"
+      ];
+      const img = bookImgs[charIndex] || bookImgs[0];
+      bookSplash.style.backgroundImage = `url('${img}')`;
+      bookSplash.style.animation = "none";
+      void bookSplash.offsetWidth;
+      bookSplash.style.animation = "bookFadeIn 1s ease-out forwards";
+    }
+  }
+
+  // character-dependent portrait on ravine slide 19
+  if (id === STATES.RAV19 && dlgFacePlayer19 && dlgNamePlayer19){
+    dlgFacePlayer19.style.backgroundImage = `url('dialogue_char${charIndex+1}.png')`;
+    dlgNamePlayer19.textContent = (typed || "CHARACTER").toUpperCase();
+  }
+
+  if (id === STATES.PAGE51){
+    document.getElementById("face-player-51").style.backgroundImage =
+      `url('dialogue_char${charIndex+1}.png')`;
+    document.getElementById("name-player-51").textContent =
+      typed.toUpperCase() || "PLAYER";
+}
+
+  if (DIALOGUE_PAGES.includes(id)) startTypingForPage(id);
+
+  // starting minigame when entering mini1
+  if (id === STATES.MINI1){
+    startMiniGame();
+  }
+}
+
+/* UI helpers */
+function setBtnFocus(i){ startBtn.classList.toggle("focus", i===0); creditsBtn.classList.toggle("focus", i===1); settingsRock.classList.toggle("focus", i===2); }
+function setSliderFocus(i){ volSlider.classList.toggle("focus", i===0); briSlider.classList.toggle("focus", i===1); }
+function setCharFocus(i){ [char0,char1,char2].forEach((el,idx)=>el.classList.toggle("focus", idx===i)); }
+
+/* Elements */
+const startBtn = document.getElementById("btn-start");
+const creditsBtn = document.getElementById("btn-credits");
+const settingsRock = document.getElementById("btn-settings");
+const volSlider = document.getElementById("slider-vol");
+const briSlider = document.getElementById("slider-bri");
+const char0 = document.getElementById("char0");
+const char1 = document.getElementById("char1");
+const char2 = document.getElementById("char2");
+const chosenSolo = document.getElementById("chosen-solo");
+const typedNameEl = document.getElementById("typed-name");
+const scenePlayer = document.getElementById("scene-player");
+const toast = document.getElementById("toast");
+const bookSplash = document.getElementById("book-splash");
+const dlgFacePlayer19 = document.getElementById("dlg-face-player-19");
+const dlgNamePlayer19 = document.getElementById("dlg-name-player-19");
+
+/* Minigame DOM */
+const miniFillEl = document.getElementById("mini-bar-fill");
+const miniTimerEl = document.getElementById("mini-timer");
+
+/* Game over DOM */
+const goTryBtn = document.getElementById("go-try");
+const goSkipBtn = document.getElementById("go-skip");
+
+/* State */
+let current = STATES.TITLE;
+let titleFocus = 0, settingsFocus = 0;
+let vol = 0.2, bri = 0.4;
+let charIndex = 0;  // 0..2
+let typed = "";
+
+/* Minigame state */
+let miniValue = 0;        // 0-100 for bar fill
+let miniTimeLeft = 10.0;  // seconds
+let miniTimerInterval = null;
+let miniDecayInterval = null;
+let miniActive = false;
+let lastMiniGame = null; // "W" or "TIMING"
+
+/* Gameover focus */
+let gameOverFocus = 0;
+
+function updateGameOverFocus(){
+  goTryBtn.classList.toggle("focus", gameOverFocus === 0);
+  goSkipBtn.classList.toggle("focus", gameOverFocus === 1);
+}
+
+/* Init */
+setBtnFocus(titleFocus);
+setSliderFocus(settingsFocus);
+setCharFocus(charIndex);
+updateSliders();
+updateGameOverFocus();
+
+function updateSliders(){
+  function setKnob(slider, value){
+    const inner = slider.querySelector(".inner");
+    const knob  = slider.querySelector(".knob");
+    const innerWidth = inner.getBoundingClientRect().width;
+    const leftPx = inner.offsetLeft + value*(innerWidth-60);
+    knob.style.left = `${Math.max(0, Math.min(slider.clientWidth-60, leftPx))}px`;
+  }
+  setKnob(volSlider, vol); 
+  setKnob(briSlider, bri);
+  document.documentElement.style.setProperty("--bg-brightness", (0.6 + bri*0.8).toFixed(2));
+}
+function reflectChosen(){ 
+  chosenSolo.className = "char-card char-" + charIndex; 
+}
+
+/* =========================
+   PLAYER FRAMES + MOVEMENT
+   ========================= */
+function framesBase(idx){ return ['char1','char2','char3'][idx] || 'char1'; }
+function setPlayerFrame(dir){
+  const base = framesBase(charIndex);
+  const file = {
+    up:`${base}_back.png`, 
+    down:`${base}_front.png`,
+    left:`${base}_left.png`, 
+    right:`${base}_right.png`,
+    stand:`${base}_stand.png`
+  }[dir] || `${base}_stand.png`;
+  scenePlayer.style.backgroundImage = `url('${file}')`;
+}
+
+/* movement in PLAY page */
+let px=90, py=138;               // spawn
+let held = {a:false,d:false,w:false,s:false};
+const speed = 3;
+
+function rect(x,y,w,h){ return {x,y,w,h}; }
+function overlap(a,b){ return !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y); }
+
+/* obstacles & interactables */
+const obstacles = [
+  rect(90,90,1080,20), rect(60,620,1080,15), rect(60,90,30,550), rect(1110,90,30,550),
+  rect(200,300,150,50), rect(520,300,150,50), rect(800,300,150,50),
+  rect(495,520,150,70), 
+];
+const shelves = [
+  rect(180,110,115,25), rect(170,520,180,200), rect(525,110,140,25), rect(870,110,140,25),
+  rect(830,520,160,40) // special -> slide 14
+];
+
+function moveLoop(){
+  if (current!==STATES.PLAY) return;
+
+  const vx = (held.d?1:0) - (held.a?1:0);
+  const vy = (held.s?1:0) - (held.w?1:0);
+
+  let nx = px + vx*speed;
+  let ny = py + vy*speed;
+
+  const plrBox = (x,y)=>rect(x, y, 60, 90);
+
+  let tryX = plrBox(nx, py);
+  if (obstacles.some(o=>overlap(o, tryX)) || shelves.some(s=>overlap(s, tryX))) nx = px;
+  let tryY = plrBox(px, ny);
+  if (obstacles.some(o=>overlap(o, tryY)) || shelves.some(s=>overlap(s, tryY))) ny = py;
+
+  px = nx; py = ny;
+  scenePlayer.style.left = px + "px";
+  scenePlayer.style.top  = py + "px";
+
+  requestAnimationFrame(moveLoop);
+}
+
+/* =========================
+   TYPING EFFECT (dialogues)
+   ========================= */
+const DIALOGUE_PAGES = [
+  STATES.DLG8, STATES.DLG9, STATES.DLG10, STATES.DLG11, STATES.DLG12,
+
+  STATES.RAV17, STATES.RAV18, STATES.RAV19, STATES.RAV20,
+  STATES.RAV22, STATES.RAV23, STATES.RAV24, STATES.RAV25, STATES.RAV27,
+
+  STATES.PAGE30, STATES.PAGE31, STATES.PAGE32,
+  STATES.PAGE33, STATES.PAGE34, STATES.PAGE35,
+  STATES.PAGE36, STATES.PAGE37, STATES.PAGE38,
+  STATES.PAGE39, STATES.PAGE41,
+
+  STATES.PAGE43, STATES.PAGE44, STATES.PAGE45, STATES.PAGE46,
+
+  STATES.PAGE47, STATES.PAGE48, STATES.PAGE49,
+  STATES.PAGE50, STATES.PAGE51, STATES.PAGE52,
+  STATES.PAGE53, STATES.PAGE54, STATES.PAGE55,
+
+  STATES.PAGE56, STATES.PAGE57, STATES.PAGE58,
+
+  STATES.PAGE59, STATES.PAGE60,
+
+  STATES.PAGE61, STATES.PAGE62, STATES.PAGE63, STATES.PAGE64,
+
+  STATES.PAGE65, STATES.PAGE66, 
+];
+
+let typingTimer = null;
+let typingActive = false;
+let typingIndex = 0;
+let typingTarget = null;
+let typingFull = "";
+const TYPE_SPEED = 18; // ms per char
+
+function startTypingForPage(pageId){
+  const page = document.getElementById(pageId);
+  const textEl = page.querySelector(".dlg .text");
+  if (!textEl) return;
+
+  typingFull = textEl.getAttribute("data-full");
+  if (!typingFull){
+    typingFull = textEl.textContent;
+    textEl.setAttribute("data-full", typingFull);
+  }
+  textEl.textContent = "";
+  typingIndex = 0;
+  typingTarget = textEl;
+  typingActive = true;
+
+  clearInterval(typingTimer);
+  typingTimer = setInterval(()=>{
+    if (typingIndex >= typingFull.length){
+      finishTyping();
+      return;
+    }
+    typingTarget.textContent += typingFull.charAt(typingIndex++);
+  }, TYPE_SPEED);
+}
+
+function finishTyping(){
+  if (!typingTarget) return;
+  typingTarget.textContent = typingFull;
+  typingActive = false;
+  clearInterval(typingTimer);
+}
+
+/* =========================
+   MINIGAME LOGIC
+   ========================= */
+function endMiniGame(won){
+  miniActive = false;
+  clearInterval(miniTimerInterval);
+  clearInterval(miniDecayInterval);
+
+  current = STATES.FADE;
+  showPage(current);
+
+  setTimeout(()=>{
+    if (won){
+      current = STATES.POSTMINI;
+      showPage(current);
+    } else {
+      lastMiniGame = "W";
+      gameOverFocus = 0;
+      updateGameOverFocus();
+      current = "page-gameover-w";
+      showPage(current);
+    }
+  }, 800);
+}
+
+function updateMiniUI(){
+  if (miniFillEl){
+    miniFillEl.style.width = miniValue + "%";
+  }
+  if (miniTimerEl){
+    miniTimerEl.textContent = "Time: " + miniTimeLeft.toFixed(1) + "s";
+  }
+}
+
+let quizLives = 3;
+let quizIndex = 0;
+
+const quizQuestions = [
+  {
+    q: "What type of stress pulls rocks apart?",
+    a: ["Compression", "Tension", "Shear", "Friction"],
+    correct: 1
+  },
+  {
+    q: "What type of stress squeezes rocks together?",
+    a: ["Shear", "Gravity", "Compression", "Elastic"],
+    correct: 2
+  },
+  {
+    q: "Which stress causes rocks to slide past each other?",
+    a: ["Tension", "Shear", "Compression", "Fracture"],
+    correct: 1
+  },
+  {
+    q: "When rocks deform but return to original shape, this is:",
+    a: ["Elastic deformation", "Plastic deformation", "Fracture", "Faulting"],
+    correct: 0
+  },
+  {
+    q: "Plastic deformation means:",
+    a: ["Rock returns to shape", "Rock bends permanently", "Rock melts", "Rock explodes"],
+    correct: 1
+  },
+  {
+    q: "Fracture is when:",
+    a: ["Rock stretches only", "Rock bends", "Rock breaks", "Rock evaporates"],
+    correct: 2
+  },
+  {
+    q: "What fault is caused by shear?",
+    a: ["Normal fault", "San Andreas fault", "Reverse fault", "Lateral crack"],
+    correct: 1
+  },
+  {
+    q: "Tension stress forms:",
+    a: ["Zigzag patterns", "Folds", "Joints & fractures", "Sand dunes"],
+    correct: 2
+  },
+  {
+    q: "Compression stress forms:",
+    a: ["Mountains & folds", "Geysers", "Smooth plains", "Caves"],
+    correct: 0
+  },
+  {
+    q: "Shear stress results in:",
+    a: ["Sliding motion", "Breaking only", "Melting only", "Explosion"],
+    correct: 0
+  }
+];
+
+
+function startMiniGame(){
+  miniActive = true;
+  miniValue = 0;
+  miniTimeLeft = 10.0;
+  updateMiniUI();
+
+  clearInterval(miniTimerInterval);
+  clearInterval(miniDecayInterval);
+
+  miniTimerInterval = setInterval(()=>{
+    if (!miniActive) return;
+    miniTimeLeft -= 0.1;
+    if (miniTimeLeft <= 0){
+      miniTimeLeft = 0;
+      updateMiniUI();
+      endMiniGame(miniValue >= 66); // threshold for win
+    } else {
+      updateMiniUI();
+    }
+  },100);
+
+  // bar slowly decays if the player stops pressing W
+  miniDecayInterval = setInterval(()=>{
+    if (!miniActive) return;
+    miniValue = Math.max(0, miniValue - 1.2);
+    updateMiniUI();
+  },120);
+}
+
+function handleMiniWPress(){
+  if (!miniActive) return;
+  miniValue = Math.min(100, miniValue + 3.2);
+  updateMiniUI();
+}
+
+/* =========================
+   MINIGAME 2: TIMING
+   ========================= */
+let timingActive = false;
+let timingPos = 0;
+let timingDir = 1; // 1 = right, -1 = left
+let timingInterval = null;
+let timingSuccessCount = 0;
+const TIMING_GOAL = 3;
+
+const movingBar = document.getElementById("timing-moving");
+const timingResult = document.getElementById("timing-result");
+
+function startTimingMini(){
+  timingActive = true;
+  timingPos = 0;
+  timingDir = 1;
+  timingResult.style.opacity = 0;
+  timingResult.textContent = "";
+
+  clearInterval(timingInterval);
+  timingInterval = setInterval(()=>{
+    if (!timingActive) return;
+
+    timingPos += timingDir * 8;
+
+    if (timingPos <= 0){ timingDir = 1; }
+    if (timingPos >= 580){ timingDir = -1; } // bar range inside 700px container
+
+    movingBar.style.left = timingPos + "px";
+  }, 30);
+}
+
+function stopTimingMini(success){
+  timingActive = false;
+  clearInterval(timingInterval);
+
+  if (!success){
+    timingSuccessCount = 0;     // reset streak
+    lastMiniGame = "TIMING";    // for game over TRY AGAIN
+    current = "page-gameover-timing";
+    showPage(current);
+    return;
+  }
+
+  // SUCCESS CASE
+  timingSuccessCount++;
+  timingResult.style.opacity = 1;
+  timingResult.style.color = "#2ecc71";
+  timingResult.textContent = `SUCCESS! (${timingSuccessCount} / ${TIMING_GOAL})`;
+
+  // NOT DONE YET → restart minigame
+  if (timingSuccessCount < TIMING_GOAL){
+    setTimeout(()=>{ startTimingMini(); }, 700);
+    return;
+  }
+
+  // FINISHED 3 SUCCESSFUL HITS → CONTINUE STORY
+  setTimeout(()=>{
+    current = STATES.FADE;
+    showPage(current);
+
+    setTimeout(()=>{
+      timingSuccessCount = 0;  // reset for next time
+      current = STATES.PAGE43; 
+      showPage(current);
+    }, 900);
+
+  }, 700);
+}
+
+let quizFocus = 0;
+
+function loadQuizQuestion(){
+  const q = quizQuestions[quizIndex];
+
+  document.getElementById("quiz-question").textContent = q.q;
+  document.getElementById("quiz-lives").textContent = "Lives: " + quizLives;
+
+  q.a.forEach((choice, i)=>{
+    document.getElementById("quiz-opt-" + i).textContent = choice;
+  });
+
+  updateQuizFocus();
+}
+
+function updateQuizFocus(){
+  for (let i=0; i<4; i++){
+    document.getElementById("quiz-opt-" + i).classList.toggle("focus", quizFocus === i);
+  }
+}
+
+function handleQuizAnswer(){
+  const correct = quizQuestions[quizIndex].correct;
+
+  if (quizFocus === correct){
+    // CORRECT
+    quizIndex++;
+
+    if (quizIndex >= quizQuestions.length){
+      // QUIZ PASS
+      current = STATES.FADE;
+      showPage(current);
+      setTimeout(()=>{
+        current = STATES.QUIZ_ENDING;
+        showPage(current);
+      },800);
+      return;
+    }
+
+    loadQuizQuestion();
+  } 
+  
+  else {
+    // WRONG
+    quizLives--;
+
+    if (quizLives <= 0){
+      // QUIZ FAIL
+      current = STATES.FADE;
+      showPage(current);
+      setTimeout(()=>{
+        current = STATES.QUIZ_GAMEOVER;
+        showPage(current);
+      },800);
+      return;
+    }
+
+    // still have lives
+    loadQuizQuestion();
+  }
+}
+
+/* =========================
+   KEYBOARD
+   ========================= */
+window.addEventListener("keydown", (e)=>{
+  if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
+  const key = e.key.toLowerCase();
+
+  /* GAME OVER PAGE */
+  if (current === STATES.GAMEOVER){
+  if (["a","d","w","s"].includes(key)){
+    gameOverFocus = gameOverFocus === 0 ? 1 : 0;
+    updateGameOverFocus();
+  }
+
+  if (key === " "){
+    current = STATES.FADE;
+    showPage(current);
+
+    setTimeout(()=>{
+
+      if (gameOverFocus === 0){ 
+        // TRY AGAIN → return to whichever mini failed
+        if (lastMiniGame === "TIMING"){
+          current = STATES.TIMING_MINI;
+          showPage(current);
+          startTimingMini();
+        } else {
+          current = STATES.MINI1;
+          showPage(current);
+          startMiniGame();
+
+        }
+      }
+
+      else {
+        // SKIP MINI GAME
+        if (lastMiniGame === "TIMING"){
+          current = STATES.PAGE43 || STATES.PAGE42; 
+        } else {
+          current = STATES.POSTMINI;
+        }
+        showPage(current);
+      }
+
+    }, 800);
+  }
+  return;
+}
+
+/* MINIGAME #1 GAME OVER (W-spam) */
+if (current === "page-gameover-w") {
+
+  if (["a","d","w","s"].includes(key)){
+    gameOverFocus = gameOverFocus === 0 ? 1 : 0;
+    updateGameOverFocus();
+  }
+
+  if (key === " "){
+    // TRY AGAIN
+    if (gameOverFocus === 0){
+      current = STATES.MINI1;
+      showPage(current);
+      startMiniGame();
+    }
+    // SKIP
+    else {
+      current = STATES.POSTMINI;   // this is page 30 flow
+      showPage(current);
+    }
+  }
+
+  return;
+}
+
+/* MINIGAME #2 GAME OVER (Timing) */
+if (current === "page-gameover-timing") {
+
+  if (key === "a" || key === "d"){
+    gameOverFocus = gameOverFocus === 0 ? 1 : 0;
+
+    document.getElementById("timing-go-try").classList.toggle("focus", gameOverFocus === 0);
+    document.getElementById("timing-go-skip").classList.toggle("focus", gameOverFocus === 1);
+  }
+
+  if (key === " "){
+    // TRY AGAIN
+    if (gameOverFocus === 0){
+      current = STATES.TIMING_MINI;
+      showPage(current);
+      startTimingMini();
+    }
+
+    // SKIP → continue story
+    else {
+      current = STATES.PAGE43;
+      showPage(current);
+    }
+  }
+
+  return;
+}
+
+/* QUIZ */
+if (current === STATES.QUIZ){
+  if (key === "w" || key === "arrowup"){
+    quizFocus = (quizFocus + 3) % 4;
+    updateQuizFocus();
+  }
+  if (key === "s" || key === "arrowdown"){
+    quizFocus = (quizFocus + 1) % 4;
+    updateQuizFocus();
+  }
+  if (key === " "){
+    handleQuizAnswer();
+  }
+  return;
+}
+
+/* QUIZ FAIL GAME OVER */
+if (current === STATES.QUIZ_GAMEOVER){
+  if (key === " "){
+    quizLives = 3;
+    quizIndex = 0;
+    quizFocus = 0;
+    current = STATES.FADE;
+    showPage(current);
+    setTimeout(()=>{
+      current = STATES.QUIZ;
+      showPage(current);
+      loadQuizQuestion();
+    },800);
+  }
+  return;
+}
+
+/* QUIZ PASS ENDING */
+if (current === STATES.QUIZ_ENDING){
+  if (key === " "){
+    current = STATES.FADE;
+    showPage(current);
+    setTimeout(()=>{
+      current = STATES.TITLE;
+      showPage(current);
+    },900);
+  }
+  return;
+}
+
+  /* MINIGAME INPUT */
+  if (current === STATES.MINI1){
+    if (key === "w"){
+      handleMiniWPress();
+    }
+    return;
+  }
+  if (current === STATES.TIMING_MINI){
+  if (e.key === " "){
+    // Check if bar is in red zone (40%–60% => pixel range)
+    const barLeft = timingPos;
+    const barRight = timingPos + 120;
+
+    const leftZone = 700 * 0.40;
+    const rightZone = 700 * 0.60;
+
+    const hit = (barRight > leftZone && barLeft < rightZone);
+    stopTimingMini(hit);
+  }
+  return;
+}
+
+  /* NAME PAGE -> fade -> intro 6 */
+  if (current === STATES.NAME){
+    if (key === " "){
+      const base = framesBase(charIndex);
+      document.documentElement.style.setProperty(
+        "--rvn-player",
+        `url('${base}_front.png')`
+      );
+
+      current = STATES.FADE; 
+      showPage(current);
+
+      setPlayerFrame('stand');
+
+      setTimeout(()=>{ current = STATES.INTRO6; showPage(current); }, 1200);
+      return;
+    }
+    if (key === "backspace"){ typed = typed.slice(0,-1); typedNameEl.textContent = typed; return; }
+    if (e.key.length===1 && typed.length<16){ typed += e.key; typedNameEl.textContent = typed; }
+    return;
+  }
+
+  // INTRO SEQUENCE: 6 -> 7 -> fade -> LIB_SETUP
+  if (current === STATES.INTRO6 && key===" "){ 
+    current = STATES.INTRO7; 
+    showPage(current); 
+    return; 
+  }
+  if (current === STATES.INTRO7 && key===" "){
+    current = STATES.FADE; 
+    showPage(current);
+    setTimeout(()=>{ 
+      current = STATES.LIB_SETUP; 
+      showPage(current); 
+    }, 1200);
+    return;
+  }
+
+  /* PLAY movement */
+  if (current === STATES.PLAY){
+    if (key==='a'){ held.a=true; setPlayerFrame('left'); }
+    if (key==='d'){ held.d=true; setPlayerFrame('right'); }
+    if (key==='w'){ held.w=true; setPlayerFrame('up'); }
+    if (key==='s'){ held.s=true; setPlayerFrame('down'); }
+    if (key===' '){
+      const near = shelves.find(s=>{
+        const cx = px+30, cy=py+45;
+        const dx = Math.max(s.x - cx, 0, cx - (s.x + s.w));
+        const dy = Math.max(s.y - cy, 0, cy - (s.y + s.h));
+        return Math.hypot(dx, dy) < 40;
+      });
+      if (near){
+        if (near===shelves[4]){
+          current = STATES.DLG14; 
+          showPage(current); 
+          setPlayerFrame('stand');
+        } else {
+          toast.textContent="No books about stress and strain here.";
+          toast.style.display="block";
+          setTimeout(()=>toast.style.display="none", 900);
+        }
+      }
+    }
+    return;
+  }
+
+  /* Dialogue pages with typing control and advancing */
+  if (DIALOGUE_PAGES.includes(current)){
+    if (key===" "){
+      if (typingActive){ 
+        finishTyping(); 
+      } else {
+        if      (current===STATES.DLG8)  { current=STATES.DLG9;  }
+        else if (current===STATES.DLG9)  { current=STATES.DLG10; }
+        else if (current===STATES.DLG10) { current=STATES.DLG11; }
+        else if (current===STATES.DLG11) { current=STATES.DLG12; }
+        else if (current===STATES.DLG12) { current=STATES.PLAY;  }
+
+        else if (current===STATES.RAV17){ current=STATES.RAV18; }
+        else if (current===STATES.RAV18){ current=STATES.RAV19; }
+        else if (current===STATES.RAV19){ current=STATES.RAV20; }
+        else if (current===STATES.RAV20){ current=STATES.RAV21; }
+        else if (current===STATES.RAV22){ current=STATES.RAV23; }
+        else if (current===STATES.RAV23){ current=STATES.RAV24; }
+        else if (current===STATES.RAV24){ current=STATES.RAV25; }
+        else if (current===STATES.RAV25){ current=STATES.RAV26; }
+        else if (current===STATES.RAV27){ current=STATES.RAV28; }
+        else if (current === STATES.PAGE30) { current = STATES.PAGE31; }
+        else if (current === STATES.PAGE31) { current = STATES.PAGE32; }
+        else if (current === STATES.PAGE32) { current = STATES.PAGE33; }
+        else if (current === STATES.PAGE33) { current = STATES.PAGE34; }
+        else if (current === STATES.PAGE34) { current = STATES.PAGE35; }
+        else if (current === STATES.PAGE35) { current = STATES.PAGE36; }
+        else if (current === STATES.PAGE36) { current = STATES.PAGE37; }
+        else if (current === STATES.PAGE37) { current = STATES.PAGE38; }
+        else if (current === STATES.PAGE38) { current = STATES.PAGE39; }
+        else if (current === STATES.PAGE39) { current = STATES.PAGE40; } 
+        else if (current === STATES.PAGE41) { current = STATES.PAGE42; }
+        else if (current === STATES.PAGE42) { current = STATES.PAGE43; }
+        else if (current === STATES.PAGE43) { current = STATES.PAGE44; }
+        else if (current === STATES.PAGE44) { current = STATES.PAGE45; }
+        else if (current === STATES.PAGE45) { current = STATES.PAGE46; }
+        else if (current === STATES.PAGE46) { current = STATES.PAGE47; }
+  
+        else if (current === STATES.PAGE47) { current = STATES.PAGE48; }
+        else if (current === STATES.PAGE48) { current = STATES.PAGE49; }
+        else if (current === STATES.PAGE49) { current = STATES.PAGE50; }
+        else if (current === STATES.PAGE50) { current = STATES.PAGE51; }
+        else if (current === STATES.PAGE51) { current = STATES.PAGE52; }
+        else if (current === STATES.PAGE52) { current = STATES.PAGE53; }
+        else if (current === STATES.PAGE53) { current = STATES.PAGE54; }
+        else if (current === STATES.PAGE54) { current = STATES.PAGE55; }
+        else if (current === STATES.PAGE55) { current = STATES.PAGE56; }
+
+        else if (current === STATES.PAGE56) { current = STATES.PAGE57; }
+        else if (current === STATES.PAGE57) { current = STATES.PAGE58; }
+        else if (current === STATES.PAGE58) { current = STATES.PAGE59; }
+
+        else if (current === STATES.PAGE59) { current = STATES.PAGE60; }
+        else if (current === STATES.PAGE60) { current = STATES.PAGE61; }
+
+        else if (current === STATES.PAGE61) { current = STATES.PAGE62; }
+        else if (current === STATES.PAGE62) { current = STATES.PAGE63; }
+        else if (current === STATES.PAGE63) { current = STATES.PAGE64; }
+        else if (current === STATES.PAGE64) { current = STATES.PAGE65; }
+        else if (current === STATES.PAGE65) { current = STATES.PAGE66; }
+        else if (current === STATES.PAGE66) { current = STATES.PAGE67; }
+
+        showPage(current);
+
+        if (current===STATES.PLAY){
+          // reset player when entering play
+          px=90; py=138; 
+          scenePlayer.style.left=px+"px"; 
+          scenePlayer.style.top=py+"px";
+          setPlayerFrame('stand'); 
+          held={a:false,d:false,w:false,s:false};
+          requestAnimationFrame(moveLoop);
+        }
+      }
+    }
+    return;
+  }
+
+  // Fade from book splash (15) into ravine (16)
+  if (current === STATES.DLG14){
+    if (key === " "){
+      current = STATES.FADE;
+      showPage(current);
+      setTimeout(()=>{
+        current = STATES.RAV16;
+        showPage(current);
+      }, 1200);
+    }
+    return;
+  }
+
+  // Non-dialogue ravine slides
+  if (current === STATES.RAV16 && key === " "){
+    current = STATES.RAV17; showPage(current); return;
+  }
+  if (current === STATES.RAV21 && key === " "){
+    current = STATES.RAV22; showPage(current); return;
+  }
+  if (current === STATES.RAV26 && key === " "){
+    current = STATES.RAV27; showPage(current); return;
+  }
+  if (current === STATES.RAV28 && key === " "){
+    // fade to RUN INTRO photo
+    current = STATES.FADE;
+    showPage(current);
+    setTimeout(()=>{
+      current = STATES.RUN_INTRO;
+      showPage(current);
+    },800);
+    return;
+  }
+
+  // RUN INTRO -> MINIGAME
+  if (current === STATES.RUN_INTRO && key === " "){
+    current = STATES.FADE;
+    showPage(current);
+    setTimeout(()=>{
+      current = STATES.MINI1;
+      showPage(current);
+    },800);
+    return;
+  }
+
+// Go to PAGE 30 after minigame
+if (current === STATES.POSTMINI && key === " "){
+    current = STATES.PAGE30;
+    showPage(current);
+    return;
+}
+
+if (current === STATES.PAGE30 && key === " ") {
+    current = STATES.PAGE31; 
+    showPage(current); 
+    return;
+}
+if (current === STATES.PAGE31 && key === " ") {
+    current = STATES.PAGE32; 
+    showPage(current); 
+    return;
+}
+if (current === STATES.PAGE32 && key === " ") {
+    current = STATES.PAGE33; 
+    showPage(current); 
+    return;
+}
+if (current === STATES.PAGE33 && key === " ") {
+    current = STATES.PAGE34; 
+    showPage(current); 
+    return;
+}
+if (current === STATES.PAGE34 && key === " ") {
+    current = STATES.PAGE35; 
+    showPage(current); 
+    return;
+}
+if (current === STATES.PAGE35 && key === " ") {
+    current = STATES.PAGE36; 
+    showPage(current); 
+    return;
+}
+if (current === STATES.PAGE36 && key === " ") {
+    current = STATES.PAGE37;
+    showPage(current);
+    return;
+}
+if (current === STATES.PAGE37 && key === " ") {
+    current = STATES.PAGE38;
+    showPage(current);
+    return;
+}
+if (current === STATES.PAGE38 && key === " ") {
+    current = STATES.PAGE39;
+    showPage(current);
+    return;
+}
+if (current === STATES.PAGE39 && key === " ") {
+    current = STATES.PAGE40;
+    showPage(current);
+    return;
+}
+if (current === STATES.PAGE40 && key === " ") {
+    current = STATES.PAGE41;
+    showPage(current);
+    return;
+}
+if (current === STATES.PAGE41 && key === " ") {
+    current = STATES.PAGE42;
+    showPage(current);
+    return;
+}
+if (current === STATES.PAGE42 && key === " ") {
+    timingSuccessCount = 0;  
+    current = STATES.FADE;
+    showPage(current);
+    setTimeout(()=>{
+        current = STATES.TIMING_MINI;
+        showPage(current);
+        startTimingMini();
+    }, 800);
+    return;
+}
+
+if (current === STATES.PAGE65 && key === " ") {
+    current = STATES.PAGE66;
+    showPage(current);
+    return;
+}
+
+if (current === STATES.PAGE66 && key === " ") {
+    current = STATES.PAGE67;
+    showPage(current);
+    return;
+}
+
+if (current === STATES.PAGE67 && key === " ") {
+    quizLives = 3;
+    quizIndex = 0;
+    quizFocus = 0;
+
+    current = STATES.FADE;
+    showPage(current);
+
+    setTimeout(()=>{
+        current = STATES.QUIZ;
+        showPage(current);
+        loadQuizQuestion();
+    }, 800);
+
+    return;
+}
+
+  /* Other pages navigation */
+  switch (current){
+    case STATES.TITLE:{
+      if (["a","w"].includes(key)) { titleFocus=(titleFocus+2)%3; setBtnFocus(titleFocus); }
+      if (["d","s"].includes(key)) { titleFocus=(titleFocus+1)%3; setBtnFocus(titleFocus); }
+      if (key===" "){
+        if (titleFocus===0){ current=STATES.CHAR; showPage(current); }
+        else if (titleFocus===1){ current=STATES.CREDITS; showPage(current); }
+        else { current=STATES.SETTINGS; showPage(current); }
+      }
+    } break;
+
+    case STATES.SETTINGS:{
+      if (key==="w"||key==="s"){ settingsFocus=(settingsFocus+1)%2; setSliderFocus(settingsFocus); }
+      if (key === "a" || key === "d"){
+
+    if (settingsFocus === 0){
+        // Adjust volume
+        vol = Math.max(
+            0,
+            Math.min(1, vol + (key === "d" ? 0.05 : -0.05))
+        );
+
+        // Apply to ACTUAL music
+        bgmMain.volume = vol;
+        bgmAdv.volume = vol;
+    } 
+    
+    else {
+        // Adjust brightness normally
+        bri = Math.max(
+            0,
+            Math.min(1, bri + (key === "d" ? 0.05 : -0.05))
+        );
+    }
+
+    updateSliders();
+}
+      if (key===" "){ current=STATES.TITLE; showPage(current); setBtnFocus(titleFocus); }
+    } break;
+
+    case STATES.CREDITS:{ 
+      if (key===" "){ current=STATES.TITLE; showPage(current); setBtnFocus(titleFocus); } 
+    } break;
+
+    case STATES.CHAR:{
+      if (key==="a"){ charIndex=(charIndex+2)%3; setCharFocus(charIndex); }
+      if (key==="d"){ charIndex=(charIndex+1)%3; setCharFocus(charIndex); }
+      if (key===" "){ reflectChosen(); typed=""; typedNameEl.textContent=typed; current=STATES.NAME; showPage(current); }
+    } break;
+
+    case STATES.LIB_SETUP:{ 
+      if (key===" "){ current=STATES.DLG8;  showPage(current); } 
+    } break;
+  }
+});
+
+window.addEventListener("keyup",(e)=>{
+  const k=e.key.toLowerCase();
+  if (k==='a') held.a=false;
+  if (k==='d') held.d=false;
+  if (k==='w') held.w=false;
+  if (k==='s') held.s=false;
+  if (!held.a && !held.d && !held.w && !held.s) setPlayerFrame('stand');
+});
+
+/* Keep keyboard focus on stage */
+stage.addEventListener("blur", ()=> stage.focus());
+
+const bgmMain = document.getElementById("bgm-main");
+const bgmAdv  = document.getElementById("bgm-adv");
+
+let bgmStarted = false;
+
+function playMainTheme(){
+  bgmAdv.pause();
+  bgmMain.play().catch(()=>{});
+}
+
+function playAdventureTheme(){
+  bgmMain.pause();
+  bgmAdv.play().catch(()=>{});
+}
+
+// unlock audio on first keypress (Chrome autoplay fix)
+window.addEventListener("keydown", ()=>{
+  if (!bgmStarted){
+    bgmStarted = true;
+    bgmMain.play().catch(()=>{});
+  }
+});
+
+</script>
+</body>
+</html>
